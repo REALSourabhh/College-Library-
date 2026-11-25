@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>College Library: Book Reservations</title>
+  <style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "DM Sans", system-ui, sans-serif;
+  color: #14232b;
+  background: #f2f5f4;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-family: "Bricolage Grotesque", "DM Sans", sans-serif;
+}
+
+:focus-visible { outline: 3px solid #f2b84b; outline-offset: 2px; }
+
+
+.topbar { background: #0e3b43; color: #fff; padding: 28px 20px; }
+.topbar-inner {
+  max-width: 1150px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.topbar h1 { font-size: 2rem; }
+.topbar p { margin: 4px 0 0; color: #bfd8d9; max-width: 52ch; }
+
+.my-link {
+  color: #fff;
+  text-decoration: none;
+  border: 1px solid #5f9096;
+  padding: 8px 16px;
+  border-radius: 999px;
+}
+.my-link:hover { background: rgba(255, 255, 255, 0.12); }
+
+
+.layout {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 28px;
+  align-items: start;
+}
+
+
+input, select {
+  font: inherit;
+  color: #14232b;
+  background: #fff;
+  border: 1px solid #d9e1df;
+  border-radius: 10px;
+  padding: 11px 14px;
+}
+
+.search-row { display: flex; gap: 10px; }
+.search-row input { flex: 1; min-width: 0; }
+
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit;
+  font-size: 0.92rem;
+  background: #fff;
+  border: 1px solid #d9e1df;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.chip:hover { border-color: #0f6b6b; }
+.chip.active { background: #14232b; color: #fff; border-color: #14232b; }
+
+.result-count { color: #5b6b73; margin: 18px 0 10px; }
+
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.book {
+  background: #fff;
+  border: 1px solid #d9e1df;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.book h3 { font-size: 1.15rem; line-height: 1.25; }
+.book p { margin: 0; }
+.author { color: var(--grey); }
+.meta { font-size: 0.88rem; color: var(--grey); }
+.book .btn { margin-top: auto; }
+
+.badge {
+  align-self: flex-start;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.available   { background: #e1f3e8; color: #1b7a4b; }
+.checked-out { background: #fbe6e3; color: #b3352b; }
+.on-hold     { background: #fff0cc; color: #85560a; }
+
+.empty {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px dashed #d9e1df;
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+  color: #5b6b73;
+}
+
+
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.btn.primary { background: #0f6b6b; color: #fff; }
+.btn.primary:hover { background: #0e3b43; }
+.btn.ghost { background: none; color: #14232b; border: 1px solid #d9e1df; }
+.btn.ghost:hover { background: #f2f5f4; }
+.btn:disabled { background: #e6ebea; color: #8a9aa0; cursor: not-allowed; }
+
+
+.sidebar {
+  background: #fff;
+  border: 1px solid #d9e1df;
+  border-radius: 12px;
+  padding: 18px;
+  position: sticky;
+  top: 16px;
+}
+.sidebar h2 { font-size: 1.25rem; }
+.hint { color: #5b6b73; font-size: 0.9rem; margin: 6px 0 0; }
+
+.notice {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #e1f3e8;
+  color: #1b7a4b;
+  font-weight: 500;
+}
+.notice:empty { display: none; }
+
+.res-list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+
+.res-item {
+  border: 1px solid #d9e1df;
+  border-left: 4px solid #e0a526;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+}
+.res-item strong, .res-item span { display: block; }
+.res-item span { color: #5b6b73; }
+.res-item.overdue { border-left-color: #b3352b; background: #fbe6e3; }
+.res-item .fine { color: #b3352b; font-weight: 700; }
+
+.res-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+
+.link-btn {
+  font: inherit;
+  font-size: 0.88rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-top: 6px;
+  color: #b3352b;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-btn.plain { color: #0f6b6b; }
+
+
+dialog {
+  border: 0;
+  border-radius: 14px;
+  padding: 24px;
+  width: min(440px, calc(100% - 32px));
+  color: #14232b;
+}
+dialog::backdrop { background: rgba(14, 35, 43, 0.55); }
+dialog h2 { font-size: 1.4rem; }
+dialog label { display: block; font-weight: 500; margin-bottom: 6px; }
+dialog input { width: 100%; font-size: 1.1rem; }
+
+.dialog-book { margin: 6px 0 16px; color: #5b6b73; }
+.error { color: #b3352b; min-height: 1.4em; margin: 6px 0 0; font-size: 0.9rem; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .topbar h1 { font-size: 1.6rem; }
+}
+@media (max-width: 520px) {
+  .search-row { flex-direction: column; }
+}
+</style>
+  <style>
+    /* style.css uses var(--grey) without defining it; define it here */
+    :root { --grey: #5b6b73; }
+  </style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <h1>College Library</h1>
+        <p>Search the catalogue, reserve a book for 24 hours, and manage your loans.</p>
+      </div>
+      <a class="my-link" href="#reservations">My reservations</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section aria-label="Book catalogue">
+      <div class="search-row">
+        <input id="searchInput" type="search" placeholder="Search books, authors, ISBN..." aria-label="Search books">
+        <select id="searchField" aria-label="Search in">
+          <option value="all">All fields</option>
+          <option value="title">Title</option>
+          <option value="author">Author</option>
+          <option value="subject">Subject</option>
+          <option value="isbn">ISBN</option>
+        </select>
+      </div>
+
+      <div class="filter-row">
+        <div class="chips" id="deptFilters" role="group" aria-label="Department"></div>
+        <select id="statusFilter" aria-label="Availability">
+          <option value="all">All books</option>
+          <option value="available">Available to reserve</option>
+          <option value="unavailable">Not available</option>
+        </select>
+      </div>
+
+      <p class="result-count" id="resultCount" aria-live="polite"></p>
+      <div class="grid" id="bookGrid"></div>
+    </section>
+
+    <aside class="sidebar" id="reservations" aria-labelledby="reservationsTitle">
+      <h2 id="reservationsTitle">My reservations</h2>
+      <p class="hint">Active: <span id="holdCount">0</span></p>
+      <p class="hint">Held books wait 24 hours. Collect them at the desk with your student ID.</p>
+      <p class="notice" id="notice" role="status"></p>
+      <ul class="res-list" id="reservationList"></ul>
+    </aside>
+  </main>
+
+  <dialog id="reserveDialog" aria-labelledby="dialogTitle">
+    <form id="reserveForm" novalidate>
+      <h2 id="dialogTitle">Reserve this book</h2>
+      <p class="dialog-book" id="dialogBook"></p>
+
+      <label for="studentName">Full name</label>
+      <input id="studentName" name="name" autocomplete="name">
+      <p class="error" id="nameError"></p>
+
+      <label for="studentId">Student ID (8 digits)</label>
+      <input id="studentId" name="studentId" inputmode="numeric" maxlength="8" autocomplete="off">
+      <p class="error" id="idError"></p>
+
+      <label for="borrowDays">Days you will keep it (1 to 15)</label>
+      <input id="borrowDays" type="number" min="1" max="15" value="7">
+      <p class="error" id="daysError"></p>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn primary">Reserve for 24 hours</button>
+      </div>
+    </form>
+
+    <div id="successBox" hidden>
+      <h2>Book reserved</h2>
+      <p id="successText"></p>
+      <div class="dialog-actions">
+        <button type="button" class="btn primary" id="doneBtn">Done</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+
+const books = [
+  { title: "Introduction to Algorithms", author: "Thomas H. Cormen", subject: "Algorithms", isbn: "9780262046305", dept: "Computer Science", shelf: "CS-1, Row 2", status: "available" },
+  { title: "Operating System Concepts", author: "Abraham Silberschatz", subject: "Operating Systems", isbn: "9781119800361", dept: "Computer Science", shelf: "CS-2, Row 1", status: "checked-out" },
+  { title: "Database System Concepts", author: "Abraham Silberschatz", subject: "Databases", isbn: "9780078022159", dept: "Computer Science", shelf: "CS-2, Row 3", status: "available" },
+  { title: "Computer Networking: A Top-Down Approach", author: "James F. Kurose", subject: "Computer Networks", isbn: "9780136681557", dept: "Computer Science", shelf: "CS-3, Row 1", status: "checked-out" },
+  { title: "Fundamentals of Python", author: "", subject: "Python Programming", isbn: "", dept: "Computer Science", shelf: "CS-4, Row 1", status: "available" },
+
+  { title: "Engineering Thermodynamics", author: "P. K. Nag", subject: "Thermodynamics", isbn: "9780070151314", dept: "Mechanical", shelf: "ME-1, Row 1", status: "available" },
+  { title: "Fluid Mechanics", author: "Frank M. White", subject: "Fluid Mechanics", isbn: "9780073398273", dept: "Mechanical", shelf: "ME-1, Row 4", status: "checked-out" },
+  { title: "Theory of Machines", author: "S. S. Rattan", subject: "Machine Design", isbn: "9789339205218", dept: "Mechanical", shelf: "ME-2, Row 2", status: "available" },
+  { title: "Heat and Mass Transfer", author: "Yunus A. Cengel", subject: "Heat Transfer", isbn: "9780073398181", dept: "Mechanical", shelf: "ME-3, Row 1", status: "available" },
+
+  { title: "Microelectronic Circuits", author: "Adel S. Sedra", subject: "Analog Electronics", isbn: "9780199339136", dept: "Electronics", shelf: "EC-1, Row 3", status: "available" },
+  { title: "Digital Design", author: "M. Morris Mano", subject: "Digital Electronics", isbn: "9780134549897", dept: "Electronics", shelf: "EC-1, Row 5", status: "checked-out" },
+  { title: "Signals and Systems", author: "Alan V. Oppenheim", subject: "Signal Processing", isbn: "9780138147570", dept: "Electronics", shelf: "EC-2, Row 2", status: "available" },
+  { title: "Electronic Communication Systems", author: "Wayne Tomasi", subject: "Communication", isbn: "9780133351323", dept: "Electronics", shelf: "EC-3, Row 4", status: "checked-out" },
+
+  { title: "Structural Analysis", author: "R. C. Hibbeler", subject: "Structures", isbn: "9780134610672", dept: "Civil", shelf: "CE-1, Row 2", status: "available" },
+  { title: "Soil Mechanics and Foundations", author: "B. C. Punmia", subject: "Geotechnical", isbn: "9788131807903", dept: "Civil", shelf: "CE-1, Row 4", status: "available" },
+  { title: "Surveying", author: "B. C. Punmia", subject: "Surveying", isbn: "9788131809853", dept: "Civil", shelf: "CE-2, Row 1", status: "checked-out" },
+  { title: "Water Supply Engineering", author: "S. K. Garg", subject: "Environmental Engineering", isbn: "9788174090256", dept: "Civil", shelf: "CE-3, Row 3", status: "available" },
+
+  { title: "Principles of Marketing", author: "Philip Kotler", subject: "Marketing", isbn: "9780135792360", dept: "Management", shelf: "MG-1, Row 1", status: "available" },
+  { title: "Financial Management", author: "I. M. Pandey", subject: "Finance", isbn: "9789325982130", dept: "Management", shelf: "MG-1, Row 3", status: "checked-out" },
+  { title: "Organizational Behavior", author: "Stephen P. Robbins", subject: "Human Resources", isbn: "9780134729329", dept: "Management", shelf: "MG-2, Row 2", status: "available" },
+  { title: "Operations Management", author: "Jay Heizer", subject: "Operations", isbn: "9780134130422", dept: "Management", shelf: "MG-2, Row 4", status: "available" }
+];
+
+const departments = ["Computer Science", "Mechanical", "Electronics", "Civil", "Management"];
+const HOLD_HOURS = 24;
+const MAX_HOLDS = 3;
+const MAX_DAYS = 15;
+const FINE_PER_DAY = 10;
+const ONE_DAY = 24 * 60 * 60 * 1000;
+
+
+const $ = id => document.getElementById(id);
+const searchInput = $("searchInput");
+const searchField = $("searchField");
+const statusFilter = $("statusFilter");
+const dialog = $("reserveDialog");
+const reserveForm = $("reserveForm");
+const successBox = $("successBox");
+
+
+let selectedDept = "All";
+let selectedIsbn = null;
+let reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
+
+
+const save = () => localStorage.setItem("reservations", JSON.stringify(reservations));
+const findHold = isbn => reservations.find(r => r.isbn === isbn);
+const getBook = isbn => books.find(b => b.isbn === isbn);
+const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+
+function daysLate(hold) {
+  if (hold.state !== "borrowed" || Date.now() <= hold.dueAt) return 0;
+  return Math.ceil((Date.now() - hold.dueAt) / ONE_DAY);
+}
+
+function timeLeft(time) {
+  const mins = Math.max(0, Math.floor((time - Date.now()) / 60000));
+  return Math.floor(mins / 60) + "h " + (mins % 60) + "m left";
+}
+
+function formatDate(time) {
+  return new Date(time).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+}
+
+function getStatus(book) {
+  const hold = findHold(book.isbn);
+  if (book.status === "checked-out" || (hold && hold.state === "borrowed")) {
+    return { label: "Checked out", css: "checked-out", canReserve: false };
+  }
+  if (hold) return { label: "On hold for 24 hours", css: "on-hold", canReserve: false };
+  return { label: "Available on shelf", css: "available", canReserve: true };
+}
+
+
+const clean = text => text.toLowerCase().replace(/-/g, "");
+
+function matches(book) {
+  if (selectedDept !== "All" && book.dept !== selectedDept) return false;
+
+  const canReserve = getStatus(book).canReserve;
+  if (statusFilter.value === "available" && !canReserve) return false;
+  if (statusFilter.value === "unavailable" && canReserve) return false;
+
+  const text = clean(searchInput.value.trim());
+  const field = searchField.value;
+  const fields = field === "all" ? ["title", "author", "subject", "isbn"] : [field];
+  return fields.some(f => clean(book[f]).includes(text));
+}
+
+
+function showDeptButtons() {
+  $("deptFilters").innerHTML = ["All", ...departments].map(name => {
+    const count = name === "All" ? books.length : books.filter(b => b.dept === name).length;
+    const active = name === selectedDept ? "active" : "";
+    return `<button class="chip ${active}" data-dept="${name}">${name} (${count})</button>`;
+  }).join("");
+}
+
+function showBooks() {
+  const found = books.filter(matches);
+  $("resultCount").textContent = plural(found.length, "book") + " found";
+
+  if (found.length === 0) {
+    $("bookGrid").innerHTML = `<div class="empty">No books match your search. Try a shorter word, another department, or clear the status filter.</div>`;
+    return;
+  }
+
+  $("bookGrid").innerHTML = found.map(book => {
+    const s = getStatus(book);
+    return `
+      <article class="book">
+        <span class="badge ${s.css}">${s.label}</span>
+        <h3>${book.title}</h3>
+        <p class="author">${book.author}</p>
+        <p class="meta"><strong>Subject:</strong> ${book.subject}</p>
+        <p class="meta"><strong>Department:</strong> ${book.dept}</p>
+        <p class="meta"><strong>ISBN:</strong> ${book.isbn}</p>
+        <p class="meta"><strong>Shelf:</strong> ${book.shelf}</p>
+        <button class="btn primary" data-isbn="${book.isbn}" ${s.canReserve ? "" : "disabled"}>
+          ${s.canReserve ? "Reserve for 24 hours" : "Not available to reserve"}
+        </button>
+      </article>`;
+  }).join("");
+}
+
+function showReservations() {
+  $("holdCount").textContent = reservations.length;
+
+  if (reservations.length === 0) {
+    $("reservationList").innerHTML = `<li class="hint">You have no active holds. Find an available book and tap Reserve.</li>`;
+    return;
+  }
+
+  $("reservationList").innerHTML = reservations.map(r => {
+    const book = getBook(r.isbn);
+    const info = `
+      <span>${r.studentName} (ID ending ${r.studentId.slice(-3)})</span>
+      <span>Borrowing for ${plural(r.days, "day")}</span>`;
+    const button = (action, text, extra = "plain") =>
+      `<button class="link-btn ${extra}" data-action="${action}" data-isbn="${r.isbn}">${text}</button>`;
+
+
+    if (r.state !== "borrowed") {
+      return `
+        <li class="res-item">
+          <strong>${book.title}</strong>
+          <span>Shelf ${book.shelf}</span>
+          ${info}
+          <span>Collect within: ${timeLeft(r.expiresAt)}</span>
+          <div class="res-actions">${button("collect", "Mark as collected")}${button("cancel", "Cancel hold", "")}</div>
+        </li>`;
+    }
+
+
+    const late = daysLate(r);
+    const due = late > 0
+      ? `<span class="fine">Overdue by ${plural(late, "day")}. Fine: ₹${late * FINE_PER_DAY}</span>
+         <span>The fine grows by ₹${FINE_PER_DAY} every day.</span>`
+      : `<span>Return by: ${formatDate(r.dueAt)}</span>`;
+    return `
+      <li class="res-item ${late > 0 ? "overdue" : ""}">
+        <strong>${book.title}</strong>
+        ${info}
+        ${due}
+        <div class="res-actions">${button("return", "Return book")}${button("skip", "Demo: skip 1 day")}</div>
+      </li>`;
+  }).join("");
+}
+
+function refreshPage() {
+
+  reservations = reservations.filter(r => r.state === "borrowed" || r.expiresAt > Date.now());
+  save();
+  showBooks();
+  showReservations();
+}
+
+
+function openDialog(isbn) {
+  selectedIsbn = isbn;
+  const book = getBook(isbn);
+  $("dialogBook").textContent = book.title + (book.author ? " by " + book.author : "");
+  reserveForm.reset();
+  $("borrowDays").value = 7;
+  ["nameError", "idError", "daysError"].forEach(id => $(id).textContent = "");
+  reserveForm.hidden = false;
+  successBox.hidden = true;
+  dialog.showModal();
+  $("studentName").focus();
+}
+
+function confirmReservation(event) {
+  event.preventDefault();
+  const name = $("studentName").value.trim();
+  const id = $("studentId").value.trim();
+  const days = Number($("borrowDays").value);
+
+  $("nameError").textContent = name.length < 3 ? "Enter your full name." : "";
+  $("idError").textContent = /^\d{8}$/.test(id) ? "" : "Enter your 8-digit student ID (numbers only).";
+  $("daysError").textContent = Number.isInteger(days) && days >= 1 && days <= MAX_DAYS
+    ? "" : "Choose between 1 and " + MAX_DAYS + " days.";
+
+  if ($("nameError").textContent || $("idError").textContent || $("daysError").textContent) return;
+
+  if (reservations.filter(r => r.studentId === id).length >= MAX_HOLDS) {
+    $("idError").textContent = "This ID already has " + MAX_HOLDS + " active holds. Cancel one to reserve another.";
+    return;
+  }
+
+  const expiresAt = Date.now() + HOLD_HOURS * 60 * 60 * 1000;
+  reservations.push({ isbn: selectedIsbn, studentName: name, studentId: id, days, expiresAt, state: "held" });
+  save();
+
+  const book = getBook(selectedIsbn);
+  const until = new Date(expiresAt).toLocaleString([], {
+    weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+  });
+  $("successText").textContent = `${name}, "${book.title}" is held for you on shelf ${book.shelf}. ` +
+    `Collect it before ${until} and bring your student ID. ` +
+    `You can keep it for ${plural(days, "day")} from pick-up.`;
+
+  reserveForm.hidden = true;
+  successBox.hidden = false;
+  refreshPage();
+}
+
+
+searchInput.addEventListener("input", showBooks);
+searchField.addEventListener("change", showBooks);
+statusFilter.addEventListener("change", showBooks);
+
+$("deptFilters").addEventListener("click", e => {
+  const button = e.target.closest("button");
+  if (!button) return;
+  selectedDept = button.dataset.dept;
+  showDeptButtons();
+  showBooks();
+});
+
+$("bookGrid").addEventListener("click", e => {
+  const button = e.target.closest("button");
+  if (button && button.dataset.isbn !== undefined) openDialog(button.dataset.isbn);
+});
+
+$("reservationList").addEventListener("click", e => {
+  const button = e.target.closest("button");
+  if (!button) return;
+
+  const action = button.dataset.action;
+  const hold = findHold(button.dataset.isbn);
+  if (!hold) return;
+  $("notice").textContent = "";
+
+  if (action === "cancel") {
+    reservations = reservations.filter(r => r !== hold);
+  } else if (action === "collect") {
+    hold.state = "borrowed";
+    hold.dueAt = Date.now() + hold.days * ONE_DAY;
+  } else if (action === "return") {
+    const fine = daysLate(hold) * FINE_PER_DAY;
+    $("notice").textContent = fine > 0
+      ? "Book returned late. Please pay a fine of ₹" + fine + " at the desk."
+      : "Book returned on time. No fine. Thank you!";
+    reservations = reservations.filter(r => r !== hold);
+  } else if (action === "skip") {
+    hold.dueAt -= ONE_DAY; 
+  }
+
+  save();
+  refreshPage();
+});
+
+reserveForm.addEventListener("submit", confirmReservation);
+$("cancelBtn").addEventListener("click", () => dialog.close());
+$("doneBtn").addEventListener("click", () => dialog.close());
+
+
+showDeptButtons();
+refreshPage();
+setInterval(refreshPage, 60000);
+</script>
+</body>
+</html>
